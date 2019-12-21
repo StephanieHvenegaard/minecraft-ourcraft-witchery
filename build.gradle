@@ -73,6 +73,17 @@ dependencies {
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft "net.minecraftforge:forge:" + modMinecraftVersion + "-" + modForgeVersion
 
+    // compile against the JEI API but do not include it at runtime
+    // compileOnly fg.deobf("mezz.jei:jei-${modMinecraftVersion}:${jeiVersion}:api")
+    // at runtime, use the full JEI jar
+    // runtimeOnly fg.deobf("mezz.jei:jei-${modMinecraftVersion}:${jeiVersion}")
+
+    //compile fileTree(dir: "libs", include: '*.jar')
+
+    compile fg.deobf(files("libs/ourcraft-core-" + coreVersion + "-dev.jar"))
+
+    //compile fg.deobf(files("libs/alib-" + alib_version + "-dev.jar"))
+
     // You may put jars on which you depend on in ./libs or you may define them like so..
     // compile "some.group:artifact:version:classifier"
     // compile "some.group:artifact:versio
@@ -93,6 +104,7 @@ dependencies {
 
 }
 
+
 // Example for how to get properties into the manifest for reading by the runtime..
 jar {
     manifest {
@@ -107,25 +119,28 @@ jar {
         ])
     }
 }
-
-// Example configuration to allow publishing using the maven-publish task
-// we define a custom artifact that is sourced from the reobfJar output task
-// and then declare that to be published
-// Note you'll need to add a repository here
-def reobfFile = file("$buildDir/reobfJar/output.jar")
-def reobfArtifact = artifacts.add('default', reobfFile) {
-    type 'jar'
-    builtBy 'reobfJar'
+task deobfJar(type: Jar) {
+    from(sourceSets.main.output)
+    archiveName = "${baseName}-${version}-deobf.${extension}"
 }
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            artifact reobfArtifact
-        }
+
+task devJar(type: Jar) {
+    from sourceSets.main.output
+    from sourceSets.main.allJava
+    classifier = 'dev'
+    manifest {
+        attributes([
+                "Specification-Title": modID,
+                "Specification-Vendor": modGroup,
+                "Specification-Version": "1", // We are version 1 of ourselves
+                "Implementation-Title": project.name,
+                "Implementation-Version": "${version}",
+                "Implementation-Vendor" :modGroup,
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
     }
-    repositories {
-        maven {
-            url "file:///${project.projectDir}/mcmodsrepo"
-        }
-    }
+}
+
+artifacts {
+    archives devJar
 }
